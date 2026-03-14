@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thí Nghiệm Kim Loại Kiềm Thổ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Animations */
+        @keyframes bubble-rise {
+            0% { transform: translateY(0) scale(0.5); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-100px) scale(1.2); opacity: 0; }
+        }
+        @keyframes flame-flicker {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+        @keyframes drop-fall {
+            0% { top: -20px; opacity: 1; }
+            100% { top: 100%; opacity: 0; }
+        }
+
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .flame-active {
+            animation: flame-flicker 0.1s infinite alternate;
+            display: block !important;
+        }
+        /* Glass effect for tubes */
+        .glass-tube {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-top: none;
+            box-shadow: inset 5px 0 10px rgba(255, 255, 255, 0.1), inset -5px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Liquid States */
+        .liquid-base {
+            transition: all 1s ease;
+            background-color: rgba(96, 165, 250, 0.3); /* Default water blue-ish */
+        }
+
+        /* Precipitate classes (Texture) */
+        .precipitate-white {
+            backdrop-filter: blur(2px);
+        }
+        
+        /* Drop Animation Class */
+        .falling-drop {
+            position: absolute;
+            width: 6px;
+            height: 8px;
+            background-color: rgba(255, 192, 203, 0.8); /* Pinkish drop for PP */
+            border-radius: 50%;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: drop-fall 0.8s linear forwards;
+            z-index: 20;
+        }
+        
+        /* Equation Text Style */
+        .equation-text {
+            font-family: 'Times New Roman', Times, serif;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex font-sans bg-slate-900 text-white selection:bg-none">
+
+    <!-- LEFT SIDE (2/3) - EXPERIMENT AREA -->
+    <div class="w-2/3 h-full relative flex flex-col p-4 border-r border-slate-700">
+        
+        <!-- Music Controls -->
+        <div class="w-full flex justify-start gap-3 mb-2 z-50">
+            <button onclick="toggleMusic()" class="bg-pink-100 hover:bg-pink-200 text-pink-800 px-3 py-1 rounded-full text-sm font-bold shadow-md border border-pink-300 flex items-center gap-2 transition-transform active:scale-95">
+                <span class="text-xl">🌸</span> Bật/tắt
+            </button>
+            <button onclick="triggerMusicUpload()" class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full text-sm font-bold shadow-md border border-yellow-300 flex items-center gap-2 transition-transform active:scale-95">
+                <span class="text-xl">🌼</span> Mở nhạc
+            </button>
+            <input type="file" id="music-upload" hidden accept="audio/*" onchange="handleMusicUpload(this)">
+            <audio id="bg-music" loop></audio>
+        </div>
+
+        <!-- Header Section -->
+        <div class="text-center mb-4 space-y-2">
+            <h1 class="text-2xl font-bold text-yellow-400 flex justify-center items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.31"/><path d="M14 2v7.31"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
+                KHÁM PHÁ TÍNH CHẤT HÓA HỌC CỦA KIM LOẠI
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.31"/><path d="M14 2v7.31"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.52 16h12.96"/></svg>
+            </h1>
+            <h2 class="text-xl font-semibold text-blue-300 flex justify-center items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v18.06a.5.5 0 0 0 .9.3l7-10.42a.5.5 0 0 0-.27-.82L10 8.6V3a1 1 0 0 0-1-1H9z"/></svg>
+                KIM LOẠI KIỀM THỔ TÁC DỤNG VỚI NƯỚC
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v18.06a.5.5 0 0 0 .9.3l7-10.42a.5.5 0 0 0-.27-.82L10 8.6V3a1 1 0 0 0-1-1H9z"/></svg>
+            </h2>
+        </div>
+
+        <!-- Main Experiment Layout: Flex Col to separate Middle (Buttons+Tubes) and Bottom (Equation) -->
+        <div class="flex-grow flex flex-col relative z-10 w-full">
+            
+            <!-- MIDDLE AREA: Reaction Buttons + Tubes -->
+            <div class="flex flex-grow items-end justify-center gap-8 w-full pb-4 px-4">
+                
+                <!-- NEW: Reaction Buttons Panel (Left of Tubes) -->
+                <div class="bg-yellow-50 border-4 border-yellow-200 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] p-4 relative flex flex-col gap-3 min-w-[160px]">
+                    <!-- 3D Effect shadow -->
+                    <div class="absolute inset-0 rounded-2xl border-b-8 border-r-8 border-yellow-300/50 pointer-events-none"></div>
+                    
+                    <button onclick="showEquation(1)" class="relative z-10 px-3 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white font-bold text-xs shadow-md border-b-4 border-gray-700 active:border-b-0 active:translate-y-1 transition-all">
+                        Phản ứng ống 1
+                    </button>
+                    <button onclick="showEquation(2)" class="relative z-10 px-3 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs shadow-md border-b-4 border-orange-700 active:border-b-0 active:translate-y-1 transition-all">
+                        Phản ứng ống 2
+                    </button>
+                    <button onclick="showEquation(3)" class="relative z-10 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold text-xs shadow-md border-b-4 border-green-800 active:border-b-0 active:translate-y-1 transition-all">
+                        Phản ứng ống 3
+                    </button>
+                    <button onclick="showEquation(4)" class="relative z-10 px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-bold text-xs shadow-md border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition-all">
+                        Phản ứng ống 4
+                    </button>
+                    <button onclick="showEquation(5)" class="relative z-10 px-3 py-2 rounded-lg bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs shadow-md border-b-4 border-purple-700 active:border-b-0 active:translate-y-1 transition-all">
+                        Phản ứng ống 5
+                    </button>
+                </div>
+
+                <!-- TUBES CONTAINER -->
+                <div id="tubes-container" class="flex gap-6 items-end">
+                    <!-- Tube 1 (Be) -->
+                    <div class="flex flex-col items-center gap-2 group">
+                        <span class="text-sm font-bold text-gray-300">Ống 1</span>
+                        <div class="relative w-16 h-64 glass-tube rounded-b-3xl overflow-hidden cursor-pointer" id="tube-1">
+                            <div id="drop-container-1" class="absolute top-0 w-full h-full pointer-events-none"></div>
+                            <div id="liquid-1" class="liquid-base absolute bottom-0 w-full h-0"></div>
+                            <div id="metal-1" class="absolute -top-10 left-1/2 -translate-x-1/2 w-6 h-6 bg-gray-400 border border-gray-200 shadow-md transition-all duration-1000 rounded-sm z-10 hidden">
+                                <span class="text-[10px] text-black font-bold flex justify-center items-center h-full">Be</span>
+                            </div>
+                            <div id="bubbles-1" class="absolute bottom-0 w-full h-1/2 overflow-hidden"></div>
+                        </div>
+                        <div class="relative w-16 h-20 flex flex-col items-center mt-2 cursor-pointer transition-transform hover:scale-105 active:scale-95" onclick="toggleLamp(1)">
+                            <div id="flame-1" class="hidden absolute -top-12 w-8 h-12 bg-gradient-to-t from-blue-600 via-yellow-300 to-transparent rounded-full blur-[2px] z-20"></div>
+                            <div class="w-2 h-4 bg-yellow-900 rounded-t-sm"></div>
+                            <div class="w-12 h-14 bg-white/80 rounded-b-xl rounded-t-md border border-gray-400 shadow-inner flex items-center justify-center">
+                                <span class="text-xs text-black font-bold">Cồn</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tube 2 (Mg) -->
+                    <div class="flex flex-col items-center gap-2 group">
+                        <span class="text-sm font-bold text-gray-300">Ống 2</span>
+                        <div class="relative w-16 h-64 glass-tube rounded-b-3xl overflow-hidden" id="tube-2">
+                            <div id="drop-container-2" class="absolute top-0 w-full h-full pointer-events-none"></div>
+                            <div id="liquid-2" class="liquid-base absolute bottom-0 w-full h-0"></div>
+                            <div id="metal-2" class="absolute -top-10 left-1/2 -translate-x-1/2 w-6 h-6 bg-gray-300 border border-gray-100 shadow-md transition-all duration-1000 rounded-sm z-10 hidden">
+                                <span class="text-[10px] text-black font-bold flex justify-center items-center h-full">Mg</span>
+                            </div>
+                            <div id="bubbles-2" class="absolute bottom-0 w-full h-1/2 overflow-hidden"></div>
+                        </div>
+                        <div class="relative w-16 h-20 flex flex-col items-center mt-2 cursor-pointer transition-transform hover:scale-105 active:scale-95" onclick="toggleLamp(2)">
+                            <div id="flame-2" class="hidden absolute -top-12 w-8 h-12 bg-gradient-to-t from-blue-600 via-yellow-300 to-transparent rounded-full blur-[2px] z-20"></div>
+                            <div class="w-2 h-4 bg-yellow-900 rounded-t-sm"></div>
+                            <div class="w-12 h-14 bg-white/80 rounded-b-xl rounded-t-md border border-gray-400 shadow-inner flex items-center justify-center">
+                                <span class="text-xs text-black font-bold">Cồn</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tube 3 (Ca) -->
+                    <div class="flex flex-col items-center gap-2">
+                        <span class="text-sm font-bold text-gray-300">Ống 3</span>
+                        <div class="relative w-16 h-64 glass-tube rounded-b-3xl overflow-hidden" id="tube-3">
+                            <div id="drop-container-3" class="absolute top-0 w-full h-full pointer-events-none"></div>
+                            <div id="liquid-3" class="liquid-base absolute bottom-0 w-full h-0"></div>
+                            <div id="metal-3" class="absolute -top-10 left-1/2 -translate-x-1/2 w-6 h-6 bg-slate-300 border border-gray-100 shadow-md transition-all duration-1000 rounded-sm z-10 hidden">
+                                <span class="text-[10px] text-black font-bold flex justify-center items-center h-full">Ca</span>
+                            </div>
+                            <div id="bubbles-3" class="absolute bottom-0 w-full h-1/2 overflow-hidden"></div>
+                        </div>
+                        <div class="w-16 h-20 mt-2"></div>
+                    </div>
+
+                    <!-- Tube 4 (Sr) -->
+                    <div class="flex flex-col items-center gap-2">
+                        <span class="text-sm font-bold text-gray-300">Ống 4</span>
+                        <div class="relative w-16 h-64 glass-tube rounded-b-3xl overflow-hidden" id="tube-4">
+                            <div id="drop-container-4" class="absolute top-0 w-full h-full pointer-events-none"></div>
+                            <div id="liquid-4" class="liquid-base absolute bottom-0 w-full h-0"></div>
+                            <div id="metal-4" class="absolute -top-10 left-1/2 -translate-x-1/2 w-6 h-6 bg-yellow-100 border border-gray-100 shadow-md transition-all duration-1000 rounded-sm z-10 hidden">
+                                <span class="text-[10px] text-black font-bold flex justify-center items-center h-full">Sr</span>
+                            </div>
+                            <div id="bubbles-4" class="absolute bottom-0 w-full h-1/2 overflow-hidden"></div>
+                        </div>
+                        <div class="w-16 h-20 mt-2"></div>
+                    </div>
+
+                    <!-- Tube 5 (Ba) -->
+                    <div class="flex flex-col items-center gap-2">
+                        <span class="text-sm font-bold text-gray-300">Ống 5</span>
+                        <div class="relative w-16 h-64 glass-tube rounded-b-3xl overflow-hidden" id="tube-5">
+                            <div id="drop-container-5" class="absolute top-0 w-full h-full pointer-events-none"></div>
+                            <div id="liquid-5" class="liquid-base absolute bottom-0 w-full h-0"></div>
+                            <div id="metal-5" class="absolute -top-10 left-1/2 -translate-x-1/2 w-6 h-6 bg-yellow-200 border border-gray-100 shadow-md transition-all duration-1000 rounded-sm z-10 hidden">
+                                <span class="text-[10px] text-black font-bold flex justify-center items-center h-full">Ba</span>
+                            </div>
+                            <div id="bubbles-5" class="absolute bottom-0 w-full h-1/2 overflow-hidden"></div>
+                        </div>
+                        <div class="w-16 h-20 mt-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTTOM AREA: Equation Display -->
+            <div class="w-full flex justify-center pb-8 mt-2">
+                <div id="equation-display" class="w-[95%] h-16 bg-white/95 rounded-xl border-4 border-blue-300 shadow-[0_5px_15px_rgba(0,0,0,0.3)] flex items-center justify-center text-xl md:text-2xl font-bold text-blue-900 equation-text select-none transition-all duration-300">
+                    <span class="text-gray-400 italic font-sans text-lg">Bấm nút bên trái để xem phương trình phản ứng</span>
+                </div>
+            </div>
+
+            <!-- Notification Area (Absolute Bottom Left) -->
+            <div id="notification" class="absolute bottom-4 left-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow-lg transform translate-y-[150%] transition-transform duration-300 z-50">
+                <p id="notification-text" class="font-bold">Thông báo</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDE (1/3) - CONTROLS AREA -->
+    <div class="w-1/3 h-full p-6 flex flex-col justify-center bg-slate-800">
+        <div class="w-full bg-yellow-50 border-4 border-yellow-200 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] p-6 relative flex flex-col gap-6 text-slate-800">
+            <!-- 3D Effect shadow -->
+            <div class="absolute inset-0 rounded-2xl border-b-8 border-r-8 border-yellow-300/50 pointer-events-none"></div>
+
+            <!-- Header -->
+            <div class="flex items-center gap-2 border-b-2 border-green-200 pb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                <h3 class="text-xl font-bold text-green-700 uppercase">Hóa chất thí nghiệm</h3>
+            </div>
+
+            <!-- Liquid Sources (Water & Phenolphthalein) -->
+            <div class="flex justify-center gap-4">
+                <!-- Water -->
+                <button onclick="addWater()" class="group relative transition-transform active:scale-95 focus:outline-none flex flex-col items-center">
+                    <svg width="60" height="80" viewBox="0 0 100 120" class="drop-shadow-lg">
+                        <path d="M30,0 L70,0 L80,20 L90,100 A10,10 0 0,1 80,110 L20,110 A10,10 0 0,1 10,100 L20,20 Z" fill="#e0f2fe" stroke="#3b82f6" stroke-width="3"/>
+                        <path d="M20,60 Q50,70 80,60 L85,100 L15,100 Z" fill="#3b82f6" opacity="0.6"/>
+                        <text x="50" y="80" text-anchor="middle" font-size="24" font-weight="bold" fill="#1e40af">
+                            H<tspan baseline-shift="sub" font-size="16">2</tspan>O
+                        </text>
+                    </svg>
+                    <span class="text-xs font-bold text-blue-700 mt-1">Nước</span>
+                </button>
+
+                <!-- Phenolphthalein (PP) -->
+                <button onclick="addPP()" class="group relative transition-transform active:scale-95 focus:outline-none flex flex-col items-center">
+                    <svg width="60" height="80" viewBox="0 0 100 120" class="drop-shadow-lg">
+                        <!-- Glass Bottle -->
+                        <path d="M35,0 L65,0 L75,15 L85,95 A10,10 0 0,1 75,105 L25,105 A10,10 0 0,1 15,95 L25,15 Z" fill="#ffffff" stroke="#9ca3af" stroke-width="3"/>
+                        <!-- Clear Liquid (Represented slightly greyish/transparent) -->
+                        <path d="M26,50 Q50,55 74,50 L83,95 L17,95 Z" fill="#f3f4f6" opacity="0.5"/>
+                        <text x="50" y="70" text-anchor="middle" font-size="28" font-weight="bold" fill="#4b5563">PP</text>
+                    </svg>
+                    <span class="text-xs font-bold text-gray-600 mt-1">Phenol</span>
+                </button>
+            </div>
+
+            <!-- Metals Grid -->
+            <div class="grid grid-cols-3 gap-4 mt-2">
+                <button onclick="addMetal(1, 'Be')" class="metal-btn flex flex-col items-center gap-1 p-2 bg-gray-200 rounded-lg shadow-md border-b-4 border-gray-400 active:border-b-0 active:translate-y-1 hover:bg-white transition-all">
+                    <div class="w-10 h-10 bg-gray-400 rounded-sm shadow-inner flex items-center justify-center font-bold text-lg">Be</div>
+                    <span class="text-xs font-bold text-gray-700">Beryllium</span>
+                </button>
+                <button onclick="addMetal(2, 'Mg')" class="metal-btn flex flex-col items-center gap-1 p-2 bg-gray-200 rounded-lg shadow-md border-b-4 border-gray-400 active:border-b-0 active:translate-y-1 hover:bg-white transition-all">
+                    <div class="w-10 h-10 bg-gray-300 rounded-sm shadow-inner flex items-center justify-center font-bold text-lg">Mg</div>
+                    <span class="text-xs font-bold text-gray-700">Magnesium</span>
+                </button>
+                <button onclick="addMetal(3, 'Ca')" class="metal-btn flex flex-col items-center gap-1 p-2 bg-gray-200 rounded-lg shadow-md border-b-4 border-gray-400 active:border-b-0 active:translate-y-1 hover:bg-white transition-all">
+                    <div class="w-10 h-10 bg-slate-300 rounded-sm shadow-inner flex items-center justify-center font-bold text-lg">Ca</div>
+                    <span class="text-xs font-bold text-gray-700">Calcium</span>
+                </button>
+                <button onclick="addMetal(4, 'Sr')" class="metal-btn flex flex-col items-center gap-1 p-2 bg-gray-200 rounded-lg shadow-md border-b-4 border-gray-400 active:border-b-0 active:translate-y-1 hover:bg-white transition-all">
+                    <div class="w-10 h-10 bg-yellow-100 rounded-sm shadow-inner flex items-center justify-center font-bold text-lg">Sr</div>
+                    <span class="text-xs font-bold text-gray-700">Strontium</span>
+                </button>
+                <button onclick="addMetal(5, 'Ba')" class="metal-btn flex flex-col items-center gap-1 p-2 bg-gray-200 rounded-lg shadow-md border-b-4 border-gray-400 active:border-b-0 active:translate-y-1 hover:bg-white transition-all">
+                    <div class="w-10 h-10 bg-yellow-200 rounded-sm shadow-inner flex items-center justify-center font-bold text-lg">Ba</div>
+                    <span class="text-xs font-bold text-gray-700">Barium</span>
+                </button>
+            </div>
+
+            <!-- Reset Button -->
+            <div class="mt-auto">
+                <button onclick="resetExperiment()" class="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl shadow-lg border-b-4 border-red-800 active:border-b-0 active:translate-y-1 transition-all flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" /></svg>
+                    Làm lại thí nghiệm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Game State ---
+        let waterCount = 0;
+        let ppCount = 0;
+        
+        const tubes = {
+            1: { hasWater: false, hasMetal: false, hasPP: false, metalType: 'Be', isHeated: false, intervalId: null, hasReacted: false },
+            2: { hasWater: false, hasMetal: false, hasPP: false, metalType: 'Mg', isHeated: false, intervalId: null, hasReacted: false },
+            3: { hasWater: false, hasMetal: false, hasPP: false, metalType: 'Ca', isHeated: false, intervalId: null, hasReacted: false },
+            4: { hasWater: false, hasMetal: false, hasPP: false, metalType: 'Sr', isHeated: false, intervalId: null, hasReacted: false },
+            5: { hasWater: false, hasMetal: false, hasPP: false, metalType: 'Ba', isHeated: false, intervalId: null, hasReacted: false }
+        };
+
+        // --- Music Functions ---
+        const audio = document.getElementById('bg-music');
+        
+        function triggerMusicUpload() {
+            document.getElementById('music-upload').click();
+        }
+
+        function handleMusicUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                audio.src = url;
+                audio.play()
+                    .then(() => showNotification("Đang phát nhạc: " + file.name))
+                    .catch(e => showNotification("Không thể phát file này"));
+            }
+        }
+
+        function toggleMusic() {
+            if (!audio.src) {
+                showNotification("Vui lòng chọn file nhạc trước (Nút 🌼)");
+                return;
+            }
+            if (audio.paused) {
+                audio.play();
+                showNotification("Đã bật nhạc");
+            } else {
+                audio.pause();
+                showNotification("Đã tạm dừng nhạc");
+            }
+        }
+
+        // --- Core Functions ---
+
+        function showNotification(msg) {
+            const notif = document.getElementById('notification');
+            document.getElementById('notification-text').innerText = msg;
+            notif.classList.remove('translate-y-[150%]'); // Show
+            setTimeout(() => {
+                notif.classList.add('translate-y-[150%]'); // Hide
+            }, 3000);
+        }
+
+        // 7. Equation Display Function (NEW)
+        function showEquation(tubeId) {
+            const display = document.getElementById('equation-display');
+            let equation = "";
+
+            switch(tubeId) {
+                case 1:
+                    equation = "Be + 2H<sub>2</sub>O &#8594; không phản ứng";
+                    break;
+                case 2:
+                    equation = "Mg + 2H<sub>2</sub>O &#8594; Mg(OH)<sub>2</sub> + H<sub>2</sub> <span class='text-sm font-normal text-red-600 ml-2'>(cần đun nóng)</span>";
+                    break;
+                case 3:
+                    equation = "Ca + 2H<sub>2</sub>O &#8594; Ca(OH)<sub>2</sub> + H<sub>2</sub>";
+                    break;
+                case 4:
+                    equation = "Sr + 2H<sub>2</sub>O &#8594; Sr(OH)<sub>2</sub> + H<sub>2</sub>";
+                    break;
+                case 5:
+                    equation = "Ba + 2H<sub>2</sub>O &#8594; Ba(OH)<sub>2</sub> + H<sub>2</sub>";
+                    break;
+            }
+
+            display.innerHTML = equation;
+        }
+
+        // 1. Add Water
+        function addWater() {
+            if (waterCount < 5) {
+                waterCount++;
+                const tubeId = waterCount;
+                const liquid = document.getElementById(`liquid-${tubeId}`);
+                liquid.style.height = '50%';
+                tubes[tubeId].hasWater = true;
+                checkReaction(tubeId);
+            } else {
+                showNotification("Cả 5 ống nghiệm đã có nước!");
+            }
+        }
+
+        // 2. Add Phenolphthalein (PP)
+        function addPP() {
+            if (ppCount < 5) {
+                ppCount++;
+                const tubeId = ppCount;
+                
+                const dropContainer = document.getElementById(`drop-container-${tubeId}`);
+                const drop = document.createElement('div');
+                drop.classList.add('falling-drop');
+                dropContainer.appendChild(drop);
+                
+                setTimeout(() => {
+                    tubes[tubeId].hasPP = true;
+                    drop.remove(); 
+                    checkReaction(tubeId);
+                }, 600);
+                
+            } else {
+                showNotification("Đã nhỏ Phenolphthalein vào cả 5 ống!");
+            }
+        }
+
+        // 3. Add Metal
+        function addMetal(tubeId, type) {
+            if (tubes[tubeId].hasMetal) {
+                showNotification(`Ống ${tubeId} đã có kim loại rồi!`);
+                return;
+            }
+            const metalEl = document.getElementById(`metal-${tubeId}`);
+            metalEl.classList.remove('hidden');
+            setTimeout(() => {
+                metalEl.style.top = "calc(100% - 1.5rem)";
+            }, 50);
+
+            tubes[tubeId].hasMetal = true;
+            tubes[tubeId].metalType = type;
+
+            setTimeout(() => {
+                checkReaction(tubeId);
+            }, 1000);
+        }
+
+        // 4. Toggle Lamp
+        function toggleLamp(tubeId) {
+            const flame = document.getElementById(`flame-${tubeId}`);
+            const isNowHeated = !tubes[tubeId].isHeated;
+            
+            if (isNowHeated) {
+                flame.classList.add('flame-active');
+                flame.classList.remove('hidden');
+                tubes[tubeId].isHeated = true;
+            } else {
+                flame.classList.remove('flame-active');
+                flame.classList.add('hidden');
+                tubes[tubeId].isHeated = false;
+            }
+            checkReaction(tubeId);
+        }
+
+        // 5. Reaction Logic Engine
+        function checkReaction(id) {
+            const tube = tubes[id];
+            const liquid = document.getElementById(`liquid-${id}`);
+            
+            let isReacting = false;
+            
+            if (tube.hasWater && tube.hasMetal) {
+                // Tube 1: Be - No reaction
+                
+                // Tube 2: Mg
+                if (id === 2) {
+                    if (tube.isHeated) {
+                        isReacting = true;
+                        tube.hasReacted = true;
+                        if (!tube.intervalId) startBubbles(id, 300);
+                    } else {
+                        isReacting = false; 
+                        if (tube.intervalId) stopBubbles(id);
+                    }
+                }
+
+                // Tube 3: Ca
+                if (id === 3) {
+                    isReacting = true;
+                    tube.hasReacted = true;
+                    if (!tube.intervalId) startBubbles(id, 150);
+                }
+
+                // Tube 4: Sr
+                if (id === 4) {
+                    isReacting = true;
+                    tube.hasReacted = true;
+                    if (!tube.intervalId) startBubbles(id, 80);
+                }
+
+                // Tube 5: Ba
+                if (id === 5) {
+                    isReacting = true;
+                    tube.hasReacted = true;
+                    if (!tube.intervalId) startBubbles(id, 40);
+                }
+            }
+
+            liquid.classList.remove('precipitate-white', 'precipitate-slight');
+            
+            if (id === 2 && tube.hasReacted) liquid.classList.add('precipitate-white'); 
+            else if (isReacting) {
+                if (id === 3) liquid.classList.add('precipitate-white');
+                if (id === 4) liquid.classList.add('precipitate-slight');
+            }
+
+            let color = "rgba(96, 165, 250, 0.3)"; 
+
+            if (tube.hasPP) {
+                if (id === 1) {
+                    color = "rgba(96, 165, 250, 0.3)"; 
+                } else if (id === 2) {
+                    if (tube.hasReacted) {
+                        color = "rgba(255, 182, 193, 0.8)"; // Light Pink
+                    } else {
+                         color = "rgba(96, 165, 250, 0.3)"; 
+                    }
+                } else if (id === 3 && tube.hasReacted) {
+                    color = "rgba(255, 105, 180, 0.6)"; 
+                } else if (id === 4 && tube.hasReacted) {
+                    color = "rgba(255, 20, 147, 0.7)"; 
+                } else if (id === 5 && tube.hasReacted) {
+                    color = "rgba(220, 20, 60, 0.8)"; 
+                }
+            }
+            
+            liquid.style.backgroundColor = color;
+        }
+
+        function startBubbles(tubeId, intervalMs) {
+            const container = document.getElementById(`bubbles-${tubeId}`);
+            if (tubes[tubeId].intervalId) return;
+
+            const interval = setInterval(() => {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                const size = Math.random() * 6 + 4; 
+                const left = Math.random() * 80 + 10; 
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${left}%`;
+                bubble.style.bottom = '0px';
+                bubble.style.animation = `bubble-rise ${Math.random() * 1 + 1}s linear forwards`;
+                container.appendChild(bubble);
+                setTimeout(() => { if(container.contains(bubble)) bubble.remove(); }, 2000);
+            }, intervalMs);
+
+            tubes[tubeId].intervalId = interval;
+        }
+
+        function stopBubbles(tubeId) {
+            clearInterval(tubes[tubeId].intervalId);
+            tubes[tubeId].intervalId = null;
+        }
+
+        function resetExperiment() {
+            waterCount = 0;
+            ppCount = 0;
+            
+            // Clear Equation
+            document.getElementById('equation-display').innerHTML = "<span class='text-gray-400 italic font-sans text-lg'>Bấm nút bên trái để xem phương trình phản ứng</span>";
+            
+            for (let i = 1; i <= 5; i++) {
+                stopBubbles(i);
+                tubes[i].hasWater = false;
+                tubes[i].hasMetal = false;
+                tubes[i].hasPP = false;
+                tubes[i].isHeated = false;
+                tubes[i].hasReacted = false; 
+                
+                const liquid = document.getElementById(`liquid-${i}`);
+                liquid.style.height = '0';
+                liquid.classList.remove('precipitate-white', 'precipitate-slight');
+                liquid.style.backgroundColor = "rgba(96, 165, 250, 0.3)";
+
+                const metal = document.getElementById(`metal-${i}`);
+                metal.classList.add('hidden');
+                metal.style.top = '-2.5rem';
+
+                document.getElementById(`bubbles-${i}`).innerHTML = '';
+                document.getElementById(`drop-container-${i}`).innerHTML = '';
+
+                if (i <= 2) {
+                    const flame = document.getElementById(`flame-${i}`);
+                    flame.classList.remove('flame-active');
+                    flame.classList.add('hidden');
+                }
+            }
+            showNotification("Thí nghiệm đã được làm lại.");
+        }
+    </script>
+</body>
+</html>
